@@ -84,9 +84,18 @@ class REINFORCE:
         # std is used in the Gaussian distribution
         # steps perform during the episode
   
+
         states, actions, rewards = self.buffer.sample()
-        discounted_returns = []
+
+        '''
+        # Since we are using a MC method we compute the expected discouted reward using: G_t <-- 
+        # we read the reward in a reverse order and we apply the discount factor
+        # number_of_sample = len(states)
+        for i in range(number_of_sample - 2, number_of_sample - steps, -1):
+            rewards[i] += rewards[i + 1] * gamma
         
+        '''
+        discounted_returns = []
         # for each timestep of the episode
         for t in range(len(rewards)):
             G = 0.0
@@ -106,7 +115,7 @@ class REINFORCE:
         discounted_returns -= np.mean(discounted_returns)
         discounted_returns /= np.std(discounted_returns + 1e-7)
 
-        # reshape for update G_t
+        # reshape for update(n° samples, len(reward)) --> G_t (δ if we use baseline)
         G = discounted_returns.reshape(-1, 1)
 
         if self.continuous:
@@ -119,21 +128,28 @@ class REINFORCE:
 
     def update_discrete(self, states, actions, rewards):
        
-        # compute the update rule: θ_t+1 = θ_t + α (Gt − b(St)) * ∇π(At|St,θ)/π(At|St,θ)
+        # compute the update rule: ∇θJ(θ) ≈ 1/N * ∑ [(∇θ logPπθ(A∣S)) * ((∑ r) - baseline)]
         with tf.GradientTape() as t:
 
             # Compute Pπθ(a|s) = πθ(A|S)
             # since we are in the discrete case the self.model(states) returns a softmax distribution
             probs = self.model(states)
 
-            # we use the indexes to
+            # probs initially is a np array of shape (steps preformed during the episode, 4) i.e., for each row (each step in the episode) we have 4 values that
+            # represent the probability of taking each action in that step.
+            # idxs is used to say at step 0 was taken action x and so on, so idxs is a np.array of shape (steps_preformed, 2) 
+            # i.e., for each row (each step in the episode) we have 2 values: the step and the action taken in the env
             idxs = np.array([[i, action] for i, action in enumerate(actions)])
+
+            # action_probs is a np.array of shape (steps_perfomed, 1) i.e., for each steps the probability related to the action taken in the env
+            # example with one value: let's suppose we have 
+            # probs = np.array[[0.26, 0,29, 0.20, 0.25]] so idxs = np.array([0, 1]) and finally action_probs = np.array[[0.29]]
             action_probs = tf.expand_dims(tf.gather_nd(probs, idxs), axis=-1)
 
-            # Take the log(Pπθ(a|s))
+            # Take the log(Pπθ(a|s)) = logπθ(A|S)
             log_probs = tf.math.log(action_probs)
 
-            # Compute the actual objective 1/N * (log(Pπθ(a|s)) * (∑ r - baseline)
+            # Compute the actual objective: mean of ( (logπθ(A|S) * G_T (or δ if we use baseline) ) 
             objective = tf.math.multiply(rewards, log_probs)
             # We negate it as we want to max the objective
             objective = -tf.math.reduce_mean(objective)
