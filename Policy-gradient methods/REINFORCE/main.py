@@ -2,6 +2,7 @@ import os; os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import gym
 from gym.spaces import Box
 from REINFORCE import *
+from logger import logger
 
 
 # ======================== PARAMETERS ===============================
@@ -10,9 +11,10 @@ params = {
     'seed': 3,
     'gpu' : False,
     'env_name': 'LunarLander-v2',
+    'render': False,
     'n_episodes': 1001,
     'print_info': True,
-    'log_info':50,
+    'log_info':1000,
     'baseline': False, # if true execute the baseline update rule otherwise the standar one.
     'gamma': 0.99,
     'std': 1,
@@ -45,10 +47,12 @@ if __name__ == '__main__':
     mean_reward = deque(maxlen=100)
     gamma = params['gamma']
     std = params['std'] # continuous agent's std dev
+    logger = logger(params['env_name'], params['seed'], 'REINFORCE')
 
     for episode in range(params['n_episodes']):
         ep_reward, steps = 0, 0  
         state = env.reset()
+        if params['render']: env.render()
 
         while True:
             if agent.continuous: 
@@ -69,8 +73,9 @@ if __name__ == '__main__':
         # after each episode we perform update
         agent.update(gamma, steps, std, params['baseline'])
         mean_reward.append(ep_reward)
-        #tracker.update([e, ep_reward])
+        logger.write(episode, ep_reward, np.mean(mean_reward))
 
-        #if episode % verbose == 0: tracker.save_metrics()
+        if episode % params['log_info'] == 0: 
+            logger.save_model(agent.model, episode, np.mean(mean_reward))
 
         print(f'Ep: {episode}, Ep_Rew: {ep_reward}, Mean_Rew: {np.mean(mean_reward)}')
