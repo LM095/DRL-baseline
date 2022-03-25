@@ -12,22 +12,22 @@ from memory import Buffer
 
 
 class REINFORCE:
-    def __init__(self, env, hyperparams, continuous):
+    def __init__(self, env, params, continuous):
 
-        np.random.seed(hyperparams['seed'])
-        tf.random.set_seed(hyperparams['seed'])
+        np.random.seed(params['seed'])
+        tf.random.set_seed(params['seed'])
         self.env = env
         self.continuous = continuous
-        if continuous: self.std = hyperparams['std']
+        if continuous: self.std = params['std']
 
-        self.model = self.build_model(env, hyperparams, continuous, name='model_REINFORCE')
+        self.model = self.build_model(env, params, continuous, name='model_REINFORCE')
         self.optimizer = Adam()
         self.buffer = Buffer()
 
 
 
 
-    def build_model(self, env, hyperparams, continuous, name):
+    def build_model(self, env, params, continuous, name):
         
         input_size = env.observation_space.shape[0]
 
@@ -36,8 +36,8 @@ class REINFORCE:
         else: 
             action_size = env.action_space.n
 
-        n_hidden_layers = hyperparams['n_hidden_layers']
-        hidden_size = hyperparams['hidden_size']
+        n_hidden_layers = params['n_hidden_layers']
+        hidden_size = params['hidden_size']
 
         # Build the network with the collected parameters
         state_input = Input(shape=(input_size,), name='input_layer')
@@ -54,7 +54,7 @@ class REINFORCE:
         model = Model(inputs=state_input, outputs=output)
 
         # PNG with the architecture and summary
-        if hyperparams['model_summary']:
+        if params['model_summary']:
             plot_model(model, to_file=name + '.png', show_shapes=True)    
             model.summary()
 
@@ -70,7 +70,7 @@ class REINFORCE:
 
         # if we are in the discrete case, passing the state as input to the DNN, we get a softmax probability distribution, and we select as action a random value in the distribution: example, 
         # let's suppose we have 5 action with p=[0.1, 0, 0.3, 0.6, 0], i.e., the probability of selecting the action 0 with this particular state is 0.1, and so on... 
-        # if we run: np.random.choice(5,p) we will obtain a value between 2,3.
+        # if we run: np.random.choice(5,p) we will obtain 2 or 3 since they are the ones with the highest probability.
         probs = self.model(np.array([state])).numpy()[0]
         action = np.random.choice(self.env.action_space.n, p=probs)
 
@@ -82,34 +82,46 @@ class REINFORCE:
         # we take the samples and we compute the cumulative reward in order to perform the update
         # gamma is the discount factor
         # std is used in the Gaussian distribution
-        # steps is the alpha parameter in the summary reported in the repo (see section )
+        # steps perform during the episode
   
 
         states, actions, rewards = self.buffer.sample()
 
-        # Compute the discounted cumulative reward as in MC methods
-        number_of_sample = len(states)
-
+        '''
+        # Since we are using a MC method we compute the expected discouted reward using: G_t <-- 
         # we read the reward in a reverse order and we apply the discount factor
+        # number_of_sample = len(states)
         for i in range(number_of_sample - 2, number_of_sample - steps, -1):
             rewards[i] += rewards[i + 1] * gamma
+        
+        '''
+        discounted_returns = []
+        # for each timestep of the episode
+        for t in range(len(rewards)):
+            G = 0.0
+            # we compute the discounted cumulative reward
+            for k, r in enumerate(rewards[t:]):
+                G += (gamma**k)*r
+            discounted_returns.append(G)
        
+        discounted_returns = np.array(discounted_returns)
+
         # We subtract the mean episode reward as baseline to reduce variance
         if baseline:
-            b = np.mean(rewards)   
-            rewards -= b
+            b = np.mean(discounted_returns)   
+            discounted_returns -= b
 
         # Normalize the reward values to reduce variance as introduced in the summary at page 
-        rewards -= np.mean(rewards)
-        rewards /= np.std(rewards + 1e-7)
+        discounted_returns -= np.mean(discounted_returns)
+        discounted_returns /= np.std(discounted_returns + 1e-7)
 
         # reshape for update(n° samples, len(reward)) --> G_t
-        rewards = rewards.reshape(-1, 1)
+        G = discounted_returns.reshape(-1, 1)
 
         if self.continuous:
-            self.update_continuous(states, actions, rewards, std)
+            self.update_continuous(states, actions, G, std)
         else:
-            self.update_discrete(states, actions, rewards)
+            self.update_discrete(states, actions, G)
 
         # After the update, we clear the buffer
         self.buffer.clear()
@@ -119,7 +131,7 @@ class REINFORCE:
         # compute the update rule: θ_t+1 = θ_t + α (Gt − b(St)) * ∇π(At|St,θ)/π(At|St,θ)
         with tf.GradientTape() as t:
 
-            # Compute Pπθ(a|s)
+            # Compute Pπθ(a|s) = πθ(A|S)
             # since we are in the discrete case the self.model(states) returns a softmax distribution
             probs = self.model(states)
 
@@ -140,7 +152,6 @@ class REINFORCE:
             self.optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
 
     def update_continuous(self, states, actions, rewards, std):
-        
 
         with tf.GradientTape() as tape:
 
@@ -164,40 +175,3 @@ class REINFORCE:
             # Compute the gradient and update the network
             grads = tape.gradient(objective, self.model.trainable_variables)
             self.optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
-
-
-    def train(self, params):
-        
-        mean_reward = deque(maxlen=100)
-        gamma = params['gamma']
-        std = params['std'] # continuous agent's std dev
-
-        for episode in range(params['n_episodes']):
-            ep_reward, steps = 0, 0  
-            state = self.env.reset()
-
-            while True:
-                if self.continuous: 
-                    action, _ = self.select_action(state, std)
-                else: 
-                    action = self.select_action(state, std)
-
-                new_state, reward, done, _ = self.env.step(action)
-
-                self.buffer.store(state, action, reward)
-
-                ep_reward += reward
-                steps += 1
-                if done: break  
-
-                state = new_state
-
-            # after each episode perform update
-            self.update(gamma, steps, std, params['baseline'])
-            mean_reward.append(ep_reward)
-            #tracker.update([e, ep_reward])
-
-            #if episode % verbose == 0: tracker.save_metrics()
-
-            print(f'Ep: {episode}, Ep_Rew: {ep_reward}, Mean_Rew: {np.mean(mean_reward)}')
-        
