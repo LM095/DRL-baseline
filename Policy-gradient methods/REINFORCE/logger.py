@@ -17,7 +17,7 @@ class logger:
 
          # open file to write
         self.log_f = open(log_f_name,"w+")
-        self.log_f.write('episode, episode_reward, mean_reward\n')
+        self.log_f.write('episode,episode_reward,mean_reward,method\n')
 
         ################### checkpointing ###################
        
@@ -34,7 +34,7 @@ class logger:
 
        
     def write(self, episode, episode_reward, mean_reward):
-        self.log_f.write(f'{episode},{episode_reward},{mean_reward}\n')
+        self.log_f.write(f'{episode},{episode_reward},{mean_reward},REINFORCE\n')
         self.log_f.flush()
 
           

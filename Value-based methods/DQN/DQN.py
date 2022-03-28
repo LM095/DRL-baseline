@@ -73,7 +73,7 @@ class DQN:
         # This is the main problem of DQN, partially resolved in DDQN
 
         # update the batch_size to avoid errors
-        batch_size = min(self.buffer.size, batch_size)
+        batch_size = min(self.buffer.size(), batch_size)
         states, actions, rewards, new_states, dones = self.buffer.sample(batch_size)
 
         # The updates require shape (n° samples, len(metric))
@@ -102,4 +102,4 @@ class DQN:
 
             # Compute the model gradient and update the network
             grad = t.gradient(loss, self.model.trainable_variables)
-            self.model_opt.apply_gradients(zip(grad, self.model.trainable_variables))
+            self.optimizer.apply_gradients(zip(grad, self.model.trainable_variables))

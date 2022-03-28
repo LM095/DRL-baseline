@@ -8,14 +8,14 @@ from logger import logger
 # ======================== PARAMETERS ===============================
 
 params = {
-    'seed': 3,
+    'seed': 4321,
     'gpu' : False,
     'env_name': 'LunarLander-v2',
     'render': False,
     'n_episodes': 1001,
     'print_info': True,
     'log_info':1000,
-    'baseline': False, # if true execute the baseline update rule otherwise the standar one.
+    'baseline': True, # if true execute the baseline update rule otherwise the standar one.
     'gamma': 0.99,
     'std': 1,
     'n_hidden_layers': 2,
