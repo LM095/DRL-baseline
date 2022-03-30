@@ -34,7 +34,8 @@ class logger:
 
        
     def write(self, episode, episode_reward, mean_reward):
-        self.log_f.write(f'{episode},{episode_reward},{mean_reward},DQN\n')
+        method = 'DQN'
+        self.log_f.write(f'{episode},{episode_reward},{mean_reward},{method}\n')
         self.log_f.flush()
 
           
