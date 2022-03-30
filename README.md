@@ -6,8 +6,6 @@
 
 **Tensorflow**: [![PyPI](https://badge.fury.io/py/tensorflow.svg)](https://badge.fury.io/py/tensorflow)  
 
-**Keras**: [![Keras](https://img.shields.io/pypi/pyversions/keras.svg?style=plastic)](https://badge.fury.io/py/keras)
-
 **OpenAI Gym**: [![Gym](https://badge.fury.io/py/gym.svg)](https://badge.fury.io/py/gym)
 
 
