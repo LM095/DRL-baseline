@@ -8,9 +8,9 @@ from logger import logger
 # ======================== PARAMETERS ===============================
 
 params = {
-    'seed': 4321,
+    'seed': 3,
     'gpu' : False,
-    'env_name': 'LunarLander-v2',
+    'env_name': 'LunarLanderContinuous-v2',
     'render': False,
     'n_episodes': 1001,
     'print_info': True,
