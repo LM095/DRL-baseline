@@ -39,7 +39,7 @@ if __name__ == '__main__':
     env.seed(params['seed'])
 
     # check discrete or continuous agent based on the env chosen
-    if params['print_info']: print('DDQN_Discrete')
+    if params['print_info']: print('DQN_Discrete')
     agent = DQN(env, params)
 
 
