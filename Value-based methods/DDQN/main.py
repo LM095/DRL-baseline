@@ -1,7 +1,7 @@
 import os; os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import gym
 from gym.spaces import Box
-from DQN import *
+from DDQN import *
 from logger import logger
 
 
@@ -16,6 +16,7 @@ params = {
     'print_info': True,
     'log_info':1000,
     'update_after': 10,
+    'update_target': 5,
     #######################
     'gamma': 0.99,
     'epsilon': 1,
@@ -38,9 +39,9 @@ if __name__ == '__main__':
     env = gym.make(params['env_name'])
     env.seed(params['seed'])
 
-    # check discrete or continuous agent based on the env chosen
+    
     if params['print_info']: print('DDQN_Discrete')
-    agent = DQN(env, params)
+    agent = DDQN(env, params)
 
 
     ######################## TRAINING ###########################
@@ -52,7 +53,7 @@ if __name__ == '__main__':
     epsilon_decay = params['epsilon_decay']
     batch_size = params['batch_size']
     
-    logger = logger(params['env_name'], params['seed'], 'DQN')
+    logger = logger(params['env_name'], params['seed'], 'DDQN')
 
     for episode in range(params['n_episodes']):
         ep_reward, steps = 0, 0  
@@ -72,6 +73,10 @@ if __name__ == '__main__':
 
             if episode > params['update_after']: 
                 agent.update(gamma, batch_size)
+                
+                #check if we have also to update target network
+                if episode % params['update_target'] == 0:
+                    agent.model_target.set_weights(agent.model.get_weights())
 
             if done: break  
 

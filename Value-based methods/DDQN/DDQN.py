@@ -11,13 +11,20 @@ from memory import Buffer
 
 
 
-class DQN:
+class DDQN:
     def __init__(self, env, params):
 
         np.random.seed(params['seed'])
         tf.random.set_seed(params['seed'])
         self.env = env
-        self.model = self.build_model(env, params, name='model_DQN')
+
+        self.model = self.build_model(env, params, name='model_DDQN')
+
+        # in DDQN we use two DNN one for the target and one for the update
+        self.model_target = self.build_model(env, params, name='model_target_DDQN')
+        # we copy the same weights for both the DNNs
+        self.model_target.set_weights(self.model.get_weights())
+
         self.optimizer = Adam()
         self.buffer = Buffer()
 
@@ -71,27 +78,22 @@ class DQN:
         batch_size = min(self.buffer.size(), batch_size)
         states, actions, rewards, new_states, dones = self.buffer.sample(batch_size)
 
-        # The updates require shape (n° samples, len(metric))
+        # we reshape the rewards in order to perform the update
         rewards = rewards.reshape(-1, 1)
         dones = dones.reshape(-1, 1)
 
         
         with tf.GradientTape() as t:
-            # Compute the target y = r + γ max_a' Q(s', a'|θ)
-            # pi(s) returns an array of values for each action
+            # Unlike the classic DQN where the target was calculated with the same network of the update, here two different networks are used
+            # Compute the target y = r + γ max_ã' Qw(š′,ã′), check dispensa_DRL.pdf
+            # Compute the target y = r + γ max_a' Q_tg(s', a'|θ), where a' is computed with model
+            obs_qvalues_target = self.model_target(new_states)
+            
             obs_qvalues = self.model(new_states)
-            # we take the arg max, i.e. for each row the index corresponding to the max value
-            obs_action = tf.math.argmax(obs_qvalues, axis=-1).numpy()
+            obs_actions = tf.math.argmax(obs_qvalues, axis=-1).numpy()
+            idxs = np.array([[int(i), int(action)] for i, action in enumerate(obs_actions)])
 
-            # we use the same technique as in REINFORCE
-            # idxs is used to say at step n was taken action x and so on, so idxs is a np.array of shape (observation_collected, 2) 
-            # e.g., idxs is a np.array of shape (n, 2), n rows (obs collected in the env) and 2 values i,argmax of Q
-            # example: if we have obs_qvalues[0] = [-0.2, 0.4, -0.3, -0.004] 
-            # obs_action[0] will be 1
-            # idxs[0] = [0, 1]
-            # max_obs_qvalues[0] = [0.4] 
-            idxs = np.array([[int(i), int(action)] for i, action in enumerate(obs_action)])
-            max_obs_qvalues = tf.expand_dims(tf.gather_nd(obs_qvalues, idxs), axis=-1)
+            max_obs_qvalues = tf.expand_dims(tf.gather_nd(obs_qvalues_target, idxs), axis=-1)
             y = rewards + gamma * max_obs_qvalues * dones
 
             # Compute values Q(s,a|θ)

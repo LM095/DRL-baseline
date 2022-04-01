@@ -14,7 +14,7 @@ The implemented algorithms are separated into two different folders:
 
 - **Value-based** methods:
   - [x] DQN [1]
-  - [ ] DDQN [2]
+  - [x] DDQN [2]
   - [ ] Dueling DQN [3] 
 
 - **Policy-gradient** methods:
