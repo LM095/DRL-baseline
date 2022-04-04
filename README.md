@@ -31,6 +31,8 @@ All the methods in every subfolder rely on a single algorithm written in Tensorf
 
 ### Results
 
+(work in progress repo...)
+
 According to the chosen methods, each algorithm was tested on different runs with random seeds over 1000 episodes on two different OpenAI gym environments (continuous and/or discrete cases). The plot shows the average reward of the last 100 episodes and the number of episodes for each method.
 
 

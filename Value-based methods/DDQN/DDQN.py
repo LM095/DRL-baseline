@@ -71,8 +71,7 @@ class DDQN:
 
     def update(self, gamma, batch_size):
         # we compute the mse of the temporal difference error given by Q(s,a|θ) and the target y = r + γ max_a' Q(s', a'|θ). 
-        # The first problem is that target values for Q depends on Q itself, hence we are chasing a non-stationary target.
-        # This is the main problem of DQN, partially resolved in DDQN
+        # with the help of the target network for stability
 
         # update the batch_size to avoid errors
         batch_size = min(self.buffer.size(), batch_size)
@@ -86,7 +85,7 @@ class DDQN:
         with tf.GradientTape() as t:
             # Unlike the classic DQN where the target was calculated with the same network of the update, here two different networks are used
             # Compute the target y = r + γ max_ã' Qw(š′,ã′), check dispensa_DRL.pdf
-            # Compute the target y = r + γ max_a' Q_tg(s', a'|θ), where a' is computed with model
+            # Compute the target y = r + γ max_a' Q_tg(s', a'|θ), where a' is computed with model_target
             obs_qvalues_target = self.model_target(new_states)
             
             obs_qvalues = self.model(new_states)
