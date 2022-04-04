@@ -87,14 +87,6 @@ class REINFORCE:
 
         states, actions, rewards = self.buffer.sample()
 
-        '''
-        # Since we are using a MC method we compute the expected discouted reward using: G_t <-- 
-        # we read the reward in a reverse order and we apply the discount factor
-        # number_of_sample = len(states)
-        for i in range(number_of_sample - 2, number_of_sample - steps, -1):
-            rewards[i] += rewards[i + 1] * gamma
-        
-        '''
         discounted_returns = []
         # for each timestep of the episode
         for t in range(len(rewards)):
