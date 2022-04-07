@@ -1,2 +1,7 @@
+**/__pycache__/
 /Value-based methods/DQN/DQN_models
 /Value-based methods/DQN/DQN_logs
+/Value-based methods/DDQN/DDQN_models
+/Value-based methods/DDQN/DDQN_logs
+/Policy-gradient methods/REINFORCE/REINFORCE_models
+/Policy-gradient methods/REINFORCE/REINFORCE_logs
